@@ -44,6 +44,12 @@ def apply_custom_styles():
             max-width: 1240px;
         }
 
+        .stApp {
+            background:
+                radial-gradient(circle at 14% 8%, rgba(217, 35, 46, 0.08), transparent 28%),
+                linear-gradient(180deg, #f7f8fb 0%, #eef2f7 100%);
+        }
+
         h1, h2, h3 {
             color: var(--ink);
             letter-spacing: 0;
@@ -78,12 +84,15 @@ def apply_custom_styles():
         }
 
         .hero {
-            background: linear-gradient(135deg, #111827 0%, #263141 54%, #d9232e 100%);
+            background:
+                linear-gradient(135deg, rgba(17, 24, 39, 0.98) 0%, rgba(38, 49, 65, 0.96) 54%, rgba(217, 35, 46, 0.96) 100%),
+                repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 12px);
             color: white;
-            padding: 1.5rem 1.6rem;
+            padding: 1.7rem 1.8rem;
             border-radius: 8px;
             margin-bottom: 1.25rem;
             border: 1px solid rgba(255, 255, 255, 0.14);
+            box-shadow: 0 18px 44px rgba(15, 23, 42, 0.18);
         }
 
         .hero h1 {
@@ -100,11 +109,12 @@ def apply_custom_styles():
         }
 
         .section-card {
-            background: var(--soft);
+            background: rgba(255, 255, 255, 0.82);
             border: 1px solid var(--line);
             border-radius: 8px;
             padding: 1rem 1.1rem;
             margin: 0.6rem 0 1rem 0;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04);
         }
 
         .callout {
@@ -114,6 +124,50 @@ def apply_custom_styles():
             padding: 0.85rem 1rem;
             color: var(--ink);
             margin: 1rem 0;
+        }
+
+        .impact-strip {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.85rem;
+            margin: 1rem 0 1.15rem 0;
+        }
+
+        .impact-card {
+            background: #ffffff;
+            border: 1px solid var(--line);
+            border-top: 4px solid var(--green);
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+        }
+
+        .impact-card.red {
+            border-top-color: var(--accent);
+        }
+
+        .impact-card.blue {
+            border-top-color: var(--blue);
+        }
+
+        .impact-card .label {
+            color: var(--muted);
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .impact-card .value {
+            color: var(--ink);
+            font-size: 1.65rem;
+            font-weight: 800;
+            margin-top: 0.2rem;
+        }
+
+        .impact-card .note {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
         }
 
         .risk-callout {
@@ -127,6 +181,12 @@ def apply_custom_styles():
             text-transform: uppercase;
             font-weight: 700;
             letter-spacing: 0.04rem;
+        }
+
+        @media (max-width: 760px) {
+            .impact-strip {
+                grid-template-columns: 1fr;
+            }
         }
         </style>
         """,
@@ -147,6 +207,54 @@ KPI_METRICS = [
     ("RF MAE", "30.95 min"),
     ("Graph RF MAE", "29.85 min"),
 ]
+
+BUSINESS_IMPACT = {
+    "revenue_at_risk": 2116800,
+    "potential_recovery": 395985,
+    "best_hub": "IND421302AAG",
+    "best_recovery": 454385,
+    "best_breaches_avoided": 3029,
+}
+
+FALLBACK_HUB_IMPACT = pd.DataFrame(
+    [
+        ["IND421302AAG", 30, 1281, 29, 10.15, 3029, 454385, 913.07],
+        ["IND000000ACB", 30, 1848, 49, 10.37, 2897, 434575, 873.40],
+        ["IND562132AAA", 30, 1366, 36, 9.04, 1771, 265670, 534.48],
+        ["IND400072AAJ", 30, 53, 1, 32.40, 1240, 186030, 379.47],
+        ["IND501359AAE", 30, 660, 27, 9.37, 981, 147097, 296.80],
+    ],
+    columns=[
+        "hub",
+        "intervention_pct",
+        "trip_volume",
+        "affected_corridors",
+        "eta_improvement_min",
+        "sla_breaches_avoided",
+        "revenue_recovered_inr",
+        "roi_score",
+    ],
+)
+
+FALLBACK_CORRIDOR_RISK = pd.DataFrame(
+    [
+        ["IND743270AAA", "IND712311AAA", "FTL", 15.35, 1.00, 5, 51.11, "Critical"],
+        ["IND741201AAC", "IND712311AAA", "FTL", 15.27, 1.00, 4, 50.91, "Critical"],
+        ["IND844505AAB", "IND842001AAA", "FTL", 11.36, 0.94, 14, 40.22, "Critical"],
+        ["IND751002AAB", "IND754103AAA", "FTL", 10.25, 1.00, 7, 39.58, "Critical"],
+        ["IND722151AAA", "IND723130AAA", "FTL", 14.21, 0.70, 8, 38.55, "Critical"],
+    ],
+    columns=[
+        "source_center",
+        "destination_center",
+        "route_type",
+        "median_delay_ratio",
+        "sla_severe_rate",
+        "trip_count",
+        "risk_score",
+        "risk_category",
+    ],
+)
 
 ARTIFACT_FILES = {
     "Phase 1 checkpoint": "phase1_checkpoint.pkl",
@@ -279,6 +387,57 @@ def show_decision_panel(title: str, bullets: list[str], style: str = "callout"):
     )
 
 
+def format_inr(value: float) -> str:
+    """Format Indian Rupee values in a compact readable form."""
+    if value >= 100000:
+        return f"INR {value / 100000:.2f} lakh"
+    return f"INR {value:,.0f}"
+
+
+def get_hub_impact_table(artifacts: dict) -> pd.DataFrame:
+    """Use simulation artifacts when available, otherwise use static fallback."""
+    hub_results = artifacts.get("Hub simulation results")
+    if isinstance(hub_results, dict) and isinstance(hub_results.get("best_interventions"), pd.DataFrame):
+        table = hub_results["best_interventions"].copy()
+        table["intervention_pct"] = (table["intervention_pct"] * 100).round(0).astype(int)
+        return table
+    return FALLBACK_HUB_IMPACT.copy()
+
+
+def get_corridor_risk_table(artifacts: dict) -> pd.DataFrame:
+    """Use ranked corridor artifacts when available, otherwise use static fallback."""
+    risk_results = artifacts.get("Corridor risk results")
+    if isinstance(risk_results, dict) and isinstance(risk_results.get("top20"), pd.DataFrame):
+        return risk_results["top20"].head(5).copy()
+    return FALLBACK_CORRIDOR_RISK.copy()
+
+
+def show_impact_cards(revenue_at_risk: float, recovery: float, breach_avoided: float):
+    """Render business impact cards in a frontend-style strip."""
+    st.markdown(
+        f"""
+        <div class="impact-strip">
+            <div class="impact-card red">
+                <div class="label">Revenue at risk</div>
+                <div class="value">{format_inr(revenue_at_risk)}</div>
+                <div class="note">Estimated exposure from severe delivery delays.</div>
+            </div>
+            <div class="impact-card">
+                <div class="label">Recoverable value</div>
+                <div class="value">{format_inr(recovery)}</div>
+                <div class="note">Potential recovery from targeted hub interventions.</div>
+            </div>
+            <div class="impact-card blue">
+                <div class="label">SLA breaches avoided</div>
+                <div class="value">{breach_avoided:,.0f}</div>
+                <div class="note">Estimated from top recommended hub interventions.</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def executive_summary(artifacts: dict):
     page_header(
         "Executive Summary",
@@ -310,6 +469,91 @@ def executive_summary(artifacts: dict):
 
     with st.expander("Artifact Load Status"):
         artifact_status(artifacts)
+
+
+def business_impact(artifacts: dict):
+    page_header(
+        "Business Impact",
+        "A decision view that translates model outputs into revenue recovery, SLA improvement, and operational priorities.",
+    )
+
+    phase5 = artifacts.get("Phase 5 checkpoint")
+    revenue_at_risk = BUSINESS_IMPACT["revenue_at_risk"]
+    recovery = BUSINESS_IMPACT["potential_recovery"]
+    if isinstance(phase5, dict):
+        revenue_at_risk = float(phase5.get("revenue_at_risk", revenue_at_risk))
+        recovery = float(phase5.get("potential_recovery", recovery))
+
+    hub_table = get_hub_impact_table(artifacts)
+    breaches_avoided = hub_table["sla_breaches_avoided"].sum()
+    show_impact_cards(revenue_at_risk, recovery, breaches_avoided)
+
+    show_decision_panel(
+        "Why this matters",
+        [
+            "The model identifies where delays happen, but the impact layer shows where action has financial value.",
+            "Top hub interventions can reduce delay ratios, avoid SLA breaches, and recover revenue without changing every corridor.",
+            "Corridor risk ranking creates a practical operations backlog for weekly review and escalation.",
+        ],
+    )
+
+    st.subheader("Recommended Hub Interventions")
+    display_hubs = hub_table[
+        [
+            "hub",
+            "intervention_pct",
+            "trip_volume",
+            "affected_corridors",
+            "eta_improvement_min",
+            "sla_breaches_avoided",
+            "revenue_recovered_inr",
+            "roi_score",
+        ]
+    ].copy()
+    display_hubs["eta_improvement_min"] = display_hubs["eta_improvement_min"].round(2)
+    display_hubs["sla_breaches_avoided"] = display_hubs["sla_breaches_avoided"].round(0).astype(int)
+    display_hubs["revenue_recovered_inr"] = display_hubs["revenue_recovered_inr"].round(0).astype(int)
+    display_hubs["roi_score"] = display_hubs["roi_score"].round(2)
+
+    st.dataframe(
+        display_hubs,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "hub": "Hub",
+            "intervention_pct": "Delay reduction %",
+            "trip_volume": "Trips",
+            "affected_corridors": "Affected corridors",
+            "eta_improvement_min": "ETA improvement (min)",
+            "sla_breaches_avoided": "SLA breaches avoided",
+            "revenue_recovered_inr": st.column_config.NumberColumn("Revenue recovered", format="INR %d"),
+            "roi_score": "ROI score",
+        },
+    )
+
+    chart_data = display_hubs.set_index("hub")[["revenue_recovered_inr", "sla_breaches_avoided"]]
+    st.bar_chart(chart_data, use_container_width=True)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Top Risk Corridors")
+        risk_table = get_corridor_risk_table(artifacts)
+        st.dataframe(risk_table, use_container_width=True, hide_index=True)
+    with col2:
+        show_plot(
+            "hub_intervention_simulator",
+            "Simulated benefit from 10%, 20%, and 30% hub delay reduction scenarios.",
+        )
+
+    show_decision_panel(
+        "Recommended operating plan",
+        [
+            "Run a 30% delay reduction pilot on the highest ROI hubs first.",
+            "Review critical FTL corridors with severe SLA rates near 100%.",
+            "Track recovered SLA breaches and revenue weekly to validate intervention ROI.",
+        ],
+        style="callout risk-callout",
+    )
 
 
 def eta_model_performance():
@@ -510,6 +754,7 @@ def main():
         "Navigation",
         [
             "Executive Summary",
+            "Business Impact",
             "ETA Model Performance",
             "Network Bottlenecks",
             "Corridor Risk Ranking",
@@ -525,6 +770,8 @@ def main():
 
     if page == "Executive Summary":
         executive_summary(artifacts)
+    elif page == "Business Impact":
+        business_impact(artifacts)
     elif page == "ETA Model Performance":
         eta_model_performance()
     elif page == "Network Bottlenecks":

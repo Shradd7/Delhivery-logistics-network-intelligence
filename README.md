@@ -37,6 +37,38 @@ The final output is a logistics intelligence system that helps answer:
 
 ---
 
+## Business Impact
+
+The project does not stop at ETA prediction. It converts model and network
+signals into an intervention plan for hubs and corridors.
+
+| Business question | Result |
+|---|---:|
+| Estimated revenue at risk from severe delays | INR 21.17 lakh |
+| Potential recovery from targeted interventions | INR 3.96 lakh |
+| Best single hub by recovered value | IND421302AAG |
+| Estimated recovery from best hub intervention | INR 4.54 lakh |
+| SLA breaches avoided at best hub | 3,029 |
+
+Recommended actions from the intervention analysis:
+
+- Run a 30% delay-reduction pilot on the highest ROI bottleneck hubs.
+- Prioritize hubs that combine high trip volume, high bottleneck score, and high recoverable value.
+- Review critical FTL corridors where severe SLA breach rates approach 100%.
+- Track recovered SLA breaches and recovered revenue weekly after intervention.
+
+Top hub intervention examples:
+
+| Hub | Delay reduction | Trips | Affected corridors | ETA improvement | SLA breaches avoided | Revenue recovered |
+|---|---:|---:|---:|---:|---:|---:|
+| IND421302AAG | 30% | 1,281 | 29 | 10.15 min | 3,029 | INR 4.54 lakh |
+| IND000000ACB | 30% | 1,848 | 49 | 10.37 min | 2,897 | INR 4.35 lakh |
+| IND562132AAA | 30% | 1,366 | 36 | 9.04 min | 1,771 | INR 2.66 lakh |
+| IND400072AAJ | 30% | 53 | 1 | 32.40 min | 1,240 | INR 1.86 lakh |
+| IND501359AAE | 30% | 660 | 27 | 9.37 min | 981 | INR 1.47 lakh |
+
+---
+
 ## Dashboard Preview
 
 The Streamlit dashboard presents executive KPIs, ETA model performance,
