@@ -67,6 +67,13 @@ Recommended actions from the intervention analysis:
 - Track recovered SLA breaches and recovered revenue weekly after intervention.
 - Recalculate impact at full Delhivery scale using current shipment volume and SLA penalty assumptions.
 
+Business assumptions:
+
+- Revenue impact is a sample-window estimate, not a full Delhivery P&L claim.
+- Annualized recovery assumes the observed recoverable value represents one comparable operating month.
+- Production ROI should include intervention cost, shipment volume, SLA penalty rules, and revenue per delayed shipment.
+- Hub recommendations should be treated as pilot priorities before committing permanent capacity changes.
+
 Top hub intervention examples:
 
 | Hub | Delay reduction | Trips | Affected corridors | ETA improvement | SLA breaches avoided | Revenue recovered |
@@ -84,6 +91,13 @@ Top hub intervention examples:
 The Streamlit dashboard presents executive KPIs, ETA model performance,
 network bottlenecks, corridor risk, delay propagation, and hub intervention
 scenarios.
+
+Interactive dashboard controls include:
+
+- Hub and intervention scenario filters for business impact.
+- Route type, risk category, state, and minimum-trip filters for corridor risk.
+- Hub comparison controls for the intervention simulator.
+- Validation tables for model performance, feature importance, and error review.
 
 ![ETA model performance](assets/plots/phase4_graph_advantage.png)
 
@@ -138,6 +152,17 @@ Result:
 - Graph RF MAE: 29.85 min
 - Graph features improved MAE by 1.09 minutes.
 
+### Model Validation
+
+Validation was designed to make the project credible beyond a single model
+score:
+
+- Modeling is evaluated at trip level after segment cleaning and aggregation.
+- Train/test splitting should happen after aggregation to avoid leakage from multiple segments of the same trip.
+- Cross-validation MAE is reported as 28.81 +/- 0.48 minutes.
+- Feature importance is reviewed to confirm that distance, OSRM time, segment count, and bottleneck features drive predictions.
+- Error should be monitored by route type, risk category, state pair, and delay bucket in production.
+
 ### Phase 5 - Business Impact
 
 Created strategy analysis covering:
@@ -191,20 +216,38 @@ The simulator estimates:
 
 ```text
 .
-├── app.py
-├── requirements.txt
-├── Dockerfile
-├── README.md
-├── assets/
-│   └── plots/
-├── artifacts/
-│   └── delhivery_graph.edgelist
-└── notebooks/
++-- app.py
++-- requirements.txt
++-- Dockerfile
++-- README.md
++-- src/
+|   +-- artifacts.py
+|   +-- impact.py
+|   +-- model_validation.py
++-- assets/
+|   +-- plots/
++-- artifacts/
+|   +-- delhivery_graph.edgelist
++-- notebooks/
 ```
 
 Large raw data and pickle checkpoints are intentionally kept out of GitHub.
 The dashboard is designed to run from static plots and lightweight project
 files.
+
+### Deployment Fallback
+
+The original analysis uses large local pickle checkpoints. Those files are not
+tracked in GitHub because some exceed GitHub's 100 MB file limit.
+
+For deployment, the dashboard uses:
+
+- Static PNG plots from `assets/plots/`.
+- Lightweight graph output from `artifacts/delhivery_graph.edgelist`.
+- Fallback summary tables embedded in `src/impact.py` and `src/model_validation.py`.
+
+If local pickle artifacts are available, the dashboard loads them. If they are
+missing, the dashboard still runs with the fallback tables and static visuals.
 
 ---
 

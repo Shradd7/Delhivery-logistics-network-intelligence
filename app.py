@@ -1,8 +1,16 @@
 from pathlib import Path
-import pickle
 
 import pandas as pd
 import streamlit as st
+
+from src.artifacts import load_artifacts
+from src.impact import (
+    apply_corridor_filters,
+    apply_hub_filters,
+    get_full_corridor_risk_table,
+    get_hub_scenario_table,
+)
+from src.model_validation import ERROR_BY_SEGMENT, VALIDATION_NOTES, get_feature_importance, get_model_results
 
 
 # ---------------------------------------------------------------------------
@@ -282,23 +290,9 @@ PLOT_FILES = {
 }
 
 
-@st.cache_data(show_spinner=False)
-def load_pickle(file_name: str):
-    """Load a pickle artifact and return None if anything goes wrong."""
-    file_path = ARTIFACTS_DIR / file_name
-    try:
-        with file_path.open("rb") as file:
-            return pickle.load(file)
-    except Exception:
-        return None
-
-
 def get_artifacts() -> dict:
     """Load all known artifacts into a dictionary."""
-    return {
-        label: load_pickle(file_name)
-        for label, file_name in ARTIFACT_FILES.items()
-    }
+    return load_artifacts(ARTIFACTS_DIR, ARTIFACT_FILES)
 
 
 def plot_path(plot_key: str) -> Path:
@@ -406,12 +400,12 @@ def get_hub_impact_table(artifacts: dict) -> pd.DataFrame:
     return FALLBACK_HUB_IMPACT.copy()
 
 
-def get_corridor_risk_table(artifacts: dict) -> pd.DataFrame:
+def get_corridor_risk_table(artifacts: dict, top_n: int = 20) -> pd.DataFrame:
     """Use ranked corridor artifacts when available, otherwise use static fallback."""
     risk_results = artifacts.get("Corridor risk results")
     if isinstance(risk_results, dict) and isinstance(risk_results.get("top20"), pd.DataFrame):
-        return risk_results["top20"].head(5).copy()
-    return FALLBACK_CORRIDOR_RISK.copy()
+        return risk_results["top20"].head(top_n).copy()
+    return FALLBACK_CORRIDOR_RISK.head(top_n).copy()
 
 
 def show_impact_cards(revenue_at_risk: float, recovery: float, breach_avoided: float):
@@ -510,10 +504,25 @@ def business_impact(artifacts: dict):
         revenue_at_risk = float(phase5.get("revenue_at_risk", revenue_at_risk))
         recovery = float(phase5.get("potential_recovery", recovery))
 
-    hub_table = get_hub_impact_table(artifacts)
+    hub_table = get_hub_scenario_table(artifacts)
+    hub_options = sorted(hub_table["hub"].dropna().astype(str).unique().tolist())
+    pct_options = sorted(hub_table["intervention_pct"].dropna().astype(int).unique().tolist())
+
+    filter_col1, filter_col2 = st.columns(2)
+    with filter_col1:
+        selected_hubs = st.multiselect("Hub filter", hub_options, default=hub_options[:5])
+    with filter_col2:
+        selected_pct = st.multiselect("Intervention scenario", pct_options, default=[max(pct_options)])
+
+    hub_table = apply_hub_filters(hub_table, selected_hubs, selected_pct)
+    if hub_table.empty:
+        st.warning("No hub interventions match the selected filters.")
+        return
+
+    scenario_recovery = hub_table["revenue_recovered_inr"].sum()
     breaches_avoided = hub_table["sla_breaches_avoided"].sum()
-    show_impact_cards(revenue_at_risk, recovery, breaches_avoided)
-    show_scale_note(recovery)
+    show_impact_cards(revenue_at_risk, scenario_recovery, breaches_avoided)
+    show_scale_note(scenario_recovery)
 
     show_decision_panel(
         "Why this matters",
@@ -565,7 +574,7 @@ def business_impact(artifacts: dict):
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Top Risk Corridors")
-        risk_table = get_corridor_risk_table(artifacts)
+        risk_table = get_corridor_risk_table(artifacts, top_n=10)
         st.dataframe(risk_table, use_container_width=True, hide_index=True)
     with col2:
         show_plot(
@@ -584,7 +593,7 @@ def business_impact(artifacts: dict):
     )
 
 
-def eta_model_performance():
+def eta_model_performance(artifacts: dict):
     page_header(
         "ETA Model Performance",
         "Comparison of baseline routing estimates, machine learning ETA predictions, and graph-enhanced features.",
@@ -621,6 +630,21 @@ def eta_model_performance():
         "Temporal features explain time-window and scheduling effects in ETA predictions.",
     )
 
+    st.subheader("Validation Summary")
+    validation_results = get_model_results(artifacts)
+    st.dataframe(validation_results, use_container_width=True, hide_index=True)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Top Feature Importance")
+        feature_importance = get_feature_importance(artifacts)
+        st.bar_chart(feature_importance.set_index("feature"), use_container_width=True)
+    with col2:
+        st.subheader("Error Review by Segment")
+        st.dataframe(ERROR_BY_SEGMENT, use_container_width=True, hide_index=True)
+
+    show_decision_panel("Validation controls", VALIDATION_NOTES)
+
 
 def network_bottlenecks():
     page_header(
@@ -652,6 +676,34 @@ def corridor_risk_ranking(artifacts: dict):
         "Corridor-level risk scoring combines delay behavior, SLA breach tendency, volume, and graph context.",
     )
 
+    risk_table = get_full_corridor_risk_table(artifacts)
+    route_options = sorted(risk_table["route_type"].dropna().astype(str).unique().tolist())
+    category_options = sorted(risk_table["risk_category"].dropna().astype(str).unique().tolist())
+    state_cols = [col for col in ["src_state", "dst_state"] if col in risk_table.columns]
+    state_options = sorted(
+        pd.concat([risk_table[col].dropna().astype(str) for col in state_cols]).unique().tolist()
+    ) if state_cols else []
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        selected_routes = st.multiselect("Route type", route_options, default=route_options)
+    with col2:
+        default_categories = [cat for cat in ["Critical", "High"] if cat in category_options] or category_options
+        selected_categories = st.multiselect("Risk category", category_options, default=default_categories)
+    with col3:
+        min_trips = st.number_input("Minimum trips", min_value=1, max_value=100, value=4, step=1)
+
+    selected_states = []
+    if state_options:
+        selected_states = st.multiselect("State filter", state_options, default=[])
+
+    filtered = apply_corridor_filters(risk_table, selected_routes, selected_categories, int(min_trips))
+    if selected_states and state_cols:
+        state_mask = pd.Series(False, index=filtered.index)
+        for col in state_cols:
+            state_mask = state_mask | filtered[col].astype(str).isin(selected_states)
+        filtered = filtered[state_mask]
+
     show_plot(
         "corridor_risk_ranking",
         "Highest-risk corridors after filtering unreliable low-volume outliers.",
@@ -667,10 +719,16 @@ def corridor_risk_ranking(artifacts: dict):
         style="callout risk-callout",
     )
 
-    preview = summarize_artifact(artifacts.get("Corridor risk results"))
-    if isinstance(preview, pd.DataFrame):
-        st.subheader("Loaded Artifact Preview")
-        st.dataframe(preview, use_container_width=True, hide_index=True)
+    st.subheader("Filtered Corridor Risk Table")
+    if filtered.empty:
+        st.warning("No corridors match the selected filters.")
+    else:
+        sort_col = "risk_score" if "risk_score" in filtered.columns else filtered.columns[0]
+        st.dataframe(
+            filtered.sort_values(sort_col, ascending=False).head(25),
+            use_container_width=True,
+            hide_index=True,
+        )
 
 
 def delay_propagation(artifacts: dict):
@@ -719,6 +777,11 @@ def hub_intervention_simulator(artifacts: dict):
     col2.metric("Target", "Top bottleneck hubs")
     col3.metric("Expected effect", "Lower ETA error and SLA breaches")
 
+    scenario_table = get_hub_scenario_table(artifacts)
+    hub_options = sorted(scenario_table["hub"].dropna().astype(str).unique().tolist())
+    selected_hubs = st.multiselect("Compare hubs", hub_options, default=hub_options[:5])
+    scenario_table = apply_hub_filters(scenario_table, selected_hubs, [reduction])
+
     show_decision_panel(
         "Simulator value",
         [
@@ -733,10 +796,28 @@ def hub_intervention_simulator(artifacts: dict):
         "Estimated value of hub-level delay reduction scenarios.",
     )
 
-    preview = summarize_artifact(artifacts.get("Hub simulation results"))
-    if isinstance(preview, pd.DataFrame):
-        st.subheader("Loaded Artifact Preview")
-        st.dataframe(preview, use_container_width=True, hide_index=True)
+    if scenario_table.empty:
+        st.warning("No hub scenarios match the selected filters.")
+    else:
+        st.subheader("Selected Scenario Details")
+        display_cols = [
+            "hub",
+            "trip_volume",
+            "affected_corridors",
+            "eta_improvement_min",
+            "sla_breaches_avoided",
+            "revenue_recovered_inr",
+            "roi_score",
+        ]
+        available_cols = [col for col in display_cols if col in scenario_table.columns]
+        st.dataframe(
+            scenario_table[available_cols].sort_values("roi_score", ascending=False),
+            use_container_width=True,
+            hide_index=True,
+        )
+        chart_cols = ["revenue_recovered_inr", "sla_breaches_avoided"]
+        if all(col in scenario_table.columns for col in chart_cols):
+            st.bar_chart(scenario_table.set_index("hub")[chart_cols], use_container_width=True)
 
 
 def methodology_and_limitations(artifacts: dict):
@@ -757,13 +838,35 @@ def methodology_and_limitations(artifacts: dict):
         """
     )
 
+    st.subheader("Model Validation")
+    st.markdown(
+        """
+        - Models are evaluated at trip level after segment-level cleaning and aggregation.
+        - Train/test splitting should happen after trip aggregation to reduce leakage from multiple segments in the same trip.
+        - Graph features are useful, but in production they should be recomputed only from historical training-window data.
+        - Cross-validation MAE is reported as 28.81 +/- 0.48 minutes to show stability across folds.
+        - Operational monitoring should track MAE by route type, risk category, state pair, and delay bucket.
+        """
+    )
+
+    st.subheader("Business Impact Assumptions")
+    st.markdown(
+        """
+        - Revenue impact is a sample-window estimate, not a full Delhivery P&L claim.
+        - Annualized impact assumes the observed recoverable value represents one comparable operating month.
+        - Final production ROI should include intervention cost, current shipment volume, SLA penalty rules, and revenue per delayed shipment.
+        - Hub recommendations are prioritization signals for pilots, not automatic capacity investment decisions.
+        """
+    )
+
     st.subheader("Limitations")
     st.markdown(
         """
         - The dashboard is designed for presentation and does not retrain models.
         - It avoids loading the large raw CSV to keep the app deployable.
         - Results depend on the quality and completeness of the original shipment data.
-        - Pickle artifacts are optional; static plots and hardcoded summary metrics keep the app available if they fail to load.
+        - Large pickle artifacts are intentionally excluded from GitHub.
+        - Pickle artifacts are optional; static plots and fallback summary tables keep the app available if they fail to load.
         """
     )
 
@@ -801,7 +904,7 @@ def main():
     elif page == "Business Impact":
         business_impact(artifacts)
     elif page == "ETA Model Performance":
-        eta_model_performance()
+        eta_model_performance(artifacts)
     elif page == "Network Bottlenecks":
         network_bottlenecks()
     elif page == "Corridor Risk Ranking":
