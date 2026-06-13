@@ -144,6 +144,12 @@ Interactive dashboard controls include:
 |   +-- artifacts.py
 |   +-- impact.py
 |   +-- model_validation.py
++-- docs/
+|   +-- CAUSAL_EXPERIMENT_DESIGN.md
+|   +-- ML_PRODUCTION_DESIGN.md
+|   +-- STATISTICAL_ANALYSIS_PLAN.md
++-- sql/
+|   +-- delhivery_analytics_queries.sql
 +-- assets/
 |   +-- plots/
 +-- artifacts/
@@ -161,6 +167,23 @@ Interactive dashboard controls include:
 
 Large raw data and pickle checkpoints are intentionally excluded from GitHub.
 The deployed dashboard runs from static plots and fallback summary tables.
+
+---
+
+## Interview Extensions
+
+These additions make the project stronger for DS, MLE, product analytics, and
+quantitative analytics interviews.
+
+| Interview Area | Artifact |
+|---|---|
+| Causal inference / A/B testing | `docs/CAUSAL_EXPERIMENT_DESIGN.md` |
+| ML system design / production retraining | `docs/ML_PRODUCTION_DESIGN.md` |
+| Statistics / hypothesis testing / Bayesian reasoning | `docs/STATISTICAL_ANALYSIS_PLAN.md` |
+| SQL product analytics | `sql/delhivery_analytics_queries.sql` |
+
+These files are design and analysis extensions. They do not require rerunning
+the notebooks or retraining the model.
 
 ---
 
