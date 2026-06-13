@@ -2,7 +2,9 @@
 
 ## Overview
 
-This project analyzes Delhivery logistics data to identify shipment delay patterns, predict ETA, detect bottleneck hubs, rank risky corridors, and simulate operational interventions.
+This project analyzes Delhivery logistics data to identify shipment delay
+patterns, predict ETA, detect bottleneck hubs, rank risky corridors, and
+simulate operational interventions.
 
 The project combines:
 
@@ -31,17 +33,33 @@ The final output is a logistics intelligence system that helps answer:
 | OSRM Baseline MAE | 161.5 min |
 | Random Forest MAE | 30.95 min |
 | Graph-Enhanced RF MAE | 29.85 min |
-| Cross-Validation MAE | 28.81 ± 0.48 min |
+| Cross-Validation MAE | 28.81 +/- 0.48 min |
+
+---
+
+## Dashboard Preview
+
+The Streamlit dashboard presents executive KPIs, ETA model performance,
+network bottlenecks, corridor risk, delay propagation, and hub intervention
+scenarios.
+
+![ETA model performance](assets/plots/phase4_graph_advantage.png)
+
+![Network bottleneck analysis](assets/plots/network_bottleneck.png)
+
+![Corridor risk ranking](assets/plots/corridor_risk_ranking.png)
+
+![Hub intervention simulator](assets/plots/hub_intervention_simulator.png)
 
 ---
 
 ## Project Phases
 
-### Phase 1 — Data Cleaning
+### Phase 1 - Data Cleaning
 
 Cleaned raw shipment segment data and removed inconsistent records.
 
-### Phase 2 — Delay Analysis
+### Phase 2 - Delay Analysis
 
 Analyzed delay patterns by route type, time window, corridor, and facility.
 
@@ -49,9 +67,9 @@ Key findings:
 
 - OSRM underestimates ETA by 69% at median.
 - Carting delays are higher than FTL delays.
-- 3 AM–4 AM trips show the highest delay.
+- 3 AM-4 AM trips show the highest delay.
 
-### Phase 3 — Baseline ETA Model
+### Phase 3 - Baseline ETA Model
 
 Built a Random Forest ETA prediction model.
 
@@ -60,9 +78,10 @@ Result:
 - OSRM MAE: 161.5 min
 - RF MAE: 30.95 min
 
-### Phase 4 — Graph-Enhanced ETA Model
+### Phase 4 - Graph-Enhanced ETA Model
 
-Constructed a logistics network graph using facilities as nodes and shipment corridors as edges.
+Constructed a logistics network graph using facilities as nodes and shipment
+corridors as edges.
 
 Used:
 
@@ -77,7 +96,7 @@ Result:
 - Graph RF MAE: 29.85 min
 - Graph features improved MAE by 1.09 minutes.
 
-### Phase 5 — Business Impact
+### Phase 5 - Business Impact
 
 Created strategy analysis covering:
 
@@ -110,7 +129,8 @@ Created a corridor-level risk score using:
 - Hub centrality
 - Route type
 
-Low-volume corridors were filtered to avoid unreliable rankings from 1-trip outliers.
+Low-volume corridors were filtered to avoid unreliable rankings from one-trip
+outliers.
 
 ### Hub Intervention Simulator
 
@@ -122,6 +142,27 @@ The simulator estimates:
 - SLA breaches avoided
 - Revenue recovered
 - Best hub intervention priority
+
+---
+
+## Repository Structure
+
+```text
+.
+├── app.py
+├── requirements.txt
+├── Dockerfile
+├── README.md
+├── assets/
+│   └── plots/
+├── artifacts/
+│   └── delhivery_graph.edgelist
+└── notebooks/
+```
+
+Large raw data and pickle checkpoints are intentionally kept out of GitHub.
+The dashboard is designed to run from static plots and lightweight project
+files.
 
 ---
 
@@ -148,7 +189,7 @@ The dashboard is intentionally lightweight and GitHub-ready:
 
 - `app.py` contains the Streamlit dashboard.
 - `assets/plots/` contains static PNG plots used by the dashboard.
-- `artifacts/` contains optional pickle result files.
+- `artifacts/` contains optional local pickle result files.
 - `requirements.txt` lists the Python dependencies.
 - `Dockerfile` can build and run the app in a container.
 

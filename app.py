@@ -22,6 +22,118 @@ st.set_page_config(
 )
 
 
+def apply_custom_styles():
+    """Add lightweight styling while keeping the app beginner-friendly."""
+    st.markdown(
+        """
+        <style>
+        :root {
+            --ink: #18212f;
+            --muted: #5d6678;
+            --line: #d9dee8;
+            --panel: #ffffff;
+            --soft: #f5f7fb;
+            --accent: #d9232e;
+            --accent-dark: #9e1c25;
+            --blue: #1f6feb;
+            --green: #178a62;
+        }
+
+        .main .block-container {
+            padding-top: 1.5rem;
+            max-width: 1240px;
+        }
+
+        h1, h2, h3 {
+            color: var(--ink);
+            letter-spacing: 0;
+        }
+
+        [data-testid="stSidebar"] {
+            background: #111827;
+        }
+
+        [data-testid="stSidebar"] * {
+            color: #f8fafc;
+        }
+
+        [data-testid="stMetric"] {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-left: 5px solid var(--accent);
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+            min-height: 118px;
+        }
+
+        [data-testid="stMetricLabel"] {
+            color: var(--muted);
+            font-size: 0.86rem;
+        }
+
+        [data-testid="stMetricValue"] {
+            color: var(--ink);
+            font-size: 1.8rem;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #111827 0%, #263141 54%, #d9232e 100%);
+            color: white;
+            padding: 1.5rem 1.6rem;
+            border-radius: 8px;
+            margin-bottom: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+        }
+
+        .hero h1 {
+            color: white;
+            margin-bottom: 0.35rem;
+            font-size: 2.15rem;
+        }
+
+        .hero p {
+            color: #e5e7eb;
+            max-width: 860px;
+            margin-bottom: 0;
+            font-size: 1rem;
+        }
+
+        .section-card {
+            background: var(--soft);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 1rem 1.1rem;
+            margin: 0.6rem 0 1rem 0;
+        }
+
+        .callout {
+            border-left: 5px solid var(--blue);
+            background: #f3f7ff;
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            color: var(--ink);
+            margin: 1rem 0;
+        }
+
+        .risk-callout {
+            border-left-color: var(--accent);
+            background: #fff5f5;
+        }
+
+        .small-label {
+            color: var(--muted);
+            font-size: 0.86rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.04rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Static summary metrics used even when pickle files are missing or unreadable.
 # ---------------------------------------------------------------------------
@@ -141,8 +253,30 @@ def artifact_status(artifacts: dict):
 
 
 def page_header(title: str, description: str):
-    st.title(title)
-    st.write(description)
+    st.markdown(
+        f"""
+        <div class="hero">
+            <div class="small-label">Delhivery Logistics Network Intelligence</div>
+            <h1>{title}</h1>
+            <p>{description}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def show_decision_panel(title: str, bullets: list[str], style: str = "callout"):
+    """Render a compact business interpretation panel."""
+    items = "".join(f"<li>{item}</li>" for item in bullets)
+    st.markdown(
+        f"""
+        <div class="{style}">
+            <strong>{title}</strong>
+            <ul>{items}</ul>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def executive_summary(artifacts: dict):
@@ -153,13 +287,13 @@ def executive_summary(artifacts: dict):
 
     show_kpi_cards()
 
-    st.subheader("Key Insights")
-    st.markdown(
-        """
-        - Graph-enhanced ETA modeling reduced MAE from the OSRM baseline of 161.5 minutes to 29.85 minutes.
-        - The logistics network contains 1,657 facilities connected by 2,781 corridors.
-        - Bottleneck hubs, risky corridors, and delay propagation patterns provide action areas beyond model accuracy.
-        """
+    show_decision_panel(
+        "Executive takeaways",
+        [
+            "Graph-enhanced ETA modeling reduced MAE from 161.5 minutes to 29.85 minutes.",
+            "The analyzed network spans 1,657 facilities and 2,781 corridors.",
+            "The project moves beyond prediction into hub, corridor, and intervention prioritization.",
+        ],
     )
 
     col1, col2 = st.columns(2)
@@ -188,6 +322,15 @@ def eta_model_performance():
     col1.metric("OSRM Baseline MAE", "161.5 min")
     col2.metric("Random Forest MAE", "30.95 min")
     col3.metric("Graph RF MAE", "29.85 min", delta="-1.09 min vs RF")
+
+    show_decision_panel(
+        "Model story",
+        [
+            "The baseline routing estimate is useful operational context but weak as an ETA predictor.",
+            "Random Forest captures most explainable structure in segment-level ETA.",
+            "Graph features add incremental lift and make the model more operationally interpretable.",
+        ],
+    )
 
     col1, col2 = st.columns(2)
     with col1:
@@ -221,6 +364,14 @@ def network_bottlenecks():
     st.info(
         "Use these bottleneck hubs as candidates for staffing, process, dispatch, or capacity interventions."
     )
+    show_decision_panel(
+        "How to use this page",
+        [
+            "Start with high-centrality hubs where small delays can affect many downstream corridors.",
+            "Prioritize hubs that combine bottleneck score, delay rate, and business volume.",
+            "Use intervention simulations before proposing costly capacity changes.",
+        ],
+    )
 
 
 def corridor_risk_ranking(artifacts: dict):
@@ -232,6 +383,16 @@ def corridor_risk_ranking(artifacts: dict):
     show_plot(
         "corridor_risk_ranking",
         "Highest-risk corridors after filtering unreliable low-volume outliers.",
+    )
+
+    show_decision_panel(
+        "Product analytics angle",
+        [
+            "Corridor ranking translates model output into a backlog of operational fixes.",
+            "Volume filtering keeps the ranking from overreacting to one-off failures.",
+            "This can support SLA monitoring, lane-level alerting, and partner performance reviews.",
+        ],
+        style="callout risk-callout",
     )
 
     preview = summarize_artifact(artifacts.get("Corridor risk results"))
@@ -249,6 +410,15 @@ def delay_propagation(artifacts: dict):
     show_plot(
         "delay_propagation",
         "Delay propagation roles across the logistics network.",
+    )
+
+    show_decision_panel(
+        "Network insight",
+        [
+            "Delay sources are good candidates for root-cause analysis.",
+            "Delay amplifiers may need process controls because they spread disruption.",
+            "Delay receivers help explain downstream customer impact.",
+        ],
     )
 
     preview = summarize_artifact(artifacts.get("Delay propagation results"))
@@ -276,6 +446,15 @@ def hub_intervention_simulator(artifacts: dict):
     col1.metric("Scenario", f"{reduction}%")
     col2.metric("Target", "Top bottleneck hubs")
     col3.metric("Expected effect", "Lower ETA error and SLA breaches")
+
+    show_decision_panel(
+        "Simulator value",
+        [
+            "Frames analytics as a decision tool, not just reporting.",
+            "Helps compare intervention intensity before committing operations resources.",
+            "Connects model outcomes to SLA breach reduction and revenue recovery.",
+        ],
+    )
 
     show_plot(
         "hub_intervention_simulator",
@@ -325,6 +504,7 @@ def main():
 
     st.sidebar.title("Delhivery Intelligence")
     st.sidebar.caption("Logistics network analytics dashboard")
+    apply_custom_styles()
 
     page = st.sidebar.radio(
         "Navigation",
