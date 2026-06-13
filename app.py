@@ -522,6 +522,10 @@ def business_impact(artifacts: dict):
     scenario_recovery = hub_table["revenue_recovered_inr"].sum()
     breaches_avoided = hub_table["sla_breaches_avoided"].sum()
     show_impact_cards(revenue_at_risk, scenario_recovery, breaches_avoided)
+    col_a, col_b, col_c = st.columns(3)
+    col_a.metric("Filtered scenarios", f"{len(hub_table):,}")
+    col_b.metric("Selected hubs", f"{hub_table['hub'].nunique():,}")
+    col_c.metric("Avg ETA gain", f"{hub_table['eta_improvement_min'].mean():.2f} min")
     show_scale_note(scenario_recovery)
 
     show_decision_panel(
@@ -723,6 +727,10 @@ def corridor_risk_ranking(artifacts: dict):
     if filtered.empty:
         st.warning("No corridors match the selected filters.")
     else:
+        metric_col1, metric_col2, metric_col3 = st.columns(3)
+        metric_col1.metric("Filtered corridors", f"{len(filtered):,}")
+        metric_col2.metric("Avg risk score", f"{filtered['risk_score'].mean():.2f}")
+        metric_col3.metric("Avg severe SLA rate", f"{filtered['sla_severe_rate'].mean() * 100:.1f}%")
         sort_col = "risk_score" if "risk_score" in filtered.columns else filtered.columns[0]
         st.dataframe(
             filtered.sort_values(sort_col, ascending=False).head(25),
@@ -781,6 +789,14 @@ def hub_intervention_simulator(artifacts: dict):
     hub_options = sorted(scenario_table["hub"].dropna().astype(str).unique().tolist())
     selected_hubs = st.multiselect("Compare hubs", hub_options, default=hub_options[:5])
     scenario_table = apply_hub_filters(scenario_table, selected_hubs, [reduction])
+    if scenario_table.empty:
+        st.warning("No hub scenarios match the selected filters.")
+        return
+
+    col_a, col_b, col_c = st.columns(3)
+    col_a.metric("Hubs selected", f"{scenario_table['hub'].nunique():,}")
+    col_b.metric("Total recovery", format_inr(scenario_table["revenue_recovered_inr"].sum()))
+    col_c.metric("Breaches avoided", f"{scenario_table['sla_breaches_avoided'].sum():,.0f}")
 
     show_decision_panel(
         "Simulator value",
@@ -796,28 +812,25 @@ def hub_intervention_simulator(artifacts: dict):
         "Estimated value of hub-level delay reduction scenarios.",
     )
 
-    if scenario_table.empty:
-        st.warning("No hub scenarios match the selected filters.")
-    else:
-        st.subheader("Selected Scenario Details")
-        display_cols = [
-            "hub",
-            "trip_volume",
-            "affected_corridors",
-            "eta_improvement_min",
-            "sla_breaches_avoided",
-            "revenue_recovered_inr",
-            "roi_score",
-        ]
-        available_cols = [col for col in display_cols if col in scenario_table.columns]
-        st.dataframe(
-            scenario_table[available_cols].sort_values("roi_score", ascending=False),
-            use_container_width=True,
-            hide_index=True,
-        )
-        chart_cols = ["revenue_recovered_inr", "sla_breaches_avoided"]
-        if all(col in scenario_table.columns for col in chart_cols):
-            st.bar_chart(scenario_table.set_index("hub")[chart_cols], use_container_width=True)
+    st.subheader("Selected Scenario Details")
+    display_cols = [
+        "hub",
+        "trip_volume",
+        "affected_corridors",
+        "eta_improvement_min",
+        "sla_breaches_avoided",
+        "revenue_recovered_inr",
+        "roi_score",
+    ]
+    available_cols = [col for col in display_cols if col in scenario_table.columns]
+    st.dataframe(
+        scenario_table[available_cols].sort_values("roi_score", ascending=False),
+        use_container_width=True,
+        hide_index=True,
+    )
+    chart_cols = ["revenue_recovered_inr", "sla_breaches_avoided"]
+    if all(col in scenario_table.columns for col in chart_cols):
+        st.bar_chart(scenario_table.set_index("hub")[chart_cols], use_container_width=True)
 
 
 def methodology_and_limitations(artifacts: dict):

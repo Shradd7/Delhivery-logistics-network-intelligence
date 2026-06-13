@@ -100,10 +100,10 @@ def get_full_corridor_risk_table(artifacts: dict) -> pd.DataFrame:
 def apply_hub_filters(table: pd.DataFrame, selected_hubs: list[str], selected_pct: list[int]) -> pd.DataFrame:
     """Filter hub intervention rows by selected hub and intervention scenario."""
     filtered = table.copy()
-    if selected_hubs:
-        filtered = filtered[filtered["hub"].isin(selected_hubs)]
-    if selected_pct:
-        filtered = filtered[filtered["intervention_pct"].isin(selected_pct)]
+    if not selected_hubs or not selected_pct:
+        return filtered.iloc[0:0]
+    filtered = filtered[filtered["hub"].isin(selected_hubs)]
+    filtered = filtered[filtered["intervention_pct"].isin(selected_pct)]
     return filtered
 
 
@@ -115,9 +115,11 @@ def apply_corridor_filters(
 ) -> pd.DataFrame:
     """Filter corridor rankings by route, risk category, and minimum trip volume."""
     filtered = table.copy()
-    if route_types and "route_type" in filtered.columns:
+    if not route_types or not risk_categories:
+        return filtered.iloc[0:0]
+    if "route_type" in filtered.columns:
         filtered = filtered[filtered["route_type"].isin(route_types)]
-    if risk_categories and "risk_category" in filtered.columns:
+    if "risk_category" in filtered.columns:
         filtered = filtered[filtered["risk_category"].isin(risk_categories)]
     if "trip_count" in filtered.columns:
         filtered = filtered[filtered["trip_count"] >= min_trips]
