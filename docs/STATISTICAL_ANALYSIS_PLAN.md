@@ -42,12 +42,11 @@ This is useful for low-volume hubs where raw breach rate can be noisy.
 If a corridor has 2 severe breaches out of 2 trips, the raw breach rate is 100%.
 But with low volume, a Bayesian prior prevents overreacting to tiny samples.
 
-## Interview Talking Point
+## Implementation Note
 
-For AMEX-style quantitative analytics, the important distinction is:
+The statistical layer separates prediction quality from decision confidence:
 
 - ML predicts ETA and ranks risk.
 - Statistics tests whether differences are significant.
 - Causal inference estimates whether interventions caused improvement.
 - Bayesian reasoning handles uncertainty when sample sizes are small.
-

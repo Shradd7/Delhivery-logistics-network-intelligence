@@ -1,5 +1,5 @@
 -- Delhivery Logistics Network Intelligence
--- SQL analytics examples for product/data science interviews.
+-- SQL analytics examples for logistics and product analysis.
 -- Assumed table: delivery_segments
 -- Columns mirror data/delivery_data.csv.
 
@@ -75,4 +75,3 @@ SELECT *
 FROM corridor_stats
 WHERE trips >= 5
 ORDER BY route_type, avg_distance, avg_delay_ratio;
-

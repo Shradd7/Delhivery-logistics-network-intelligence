@@ -170,17 +170,17 @@ The deployed dashboard runs from static plots and fallback summary tables.
 
 ---
 
-## Interview Extensions
+## Operational Analytics Extensions
 
-These additions make the project stronger for DS, MLE, product analytics, and
-quantitative analytics interviews.
+These additions document how the analysis can be extended into experimentation,
+production monitoring, statistical validation, and SQL-based analytics.
 
-| Interview Area | Artifact |
+| Area | Artifact |
 |---|---|
-| Causal inference / A/B testing | `docs/CAUSAL_EXPERIMENT_DESIGN.md` |
-| ML system design / production retraining | `docs/ML_PRODUCTION_DESIGN.md` |
-| Statistics / hypothesis testing / Bayesian reasoning | `docs/STATISTICAL_ANALYSIS_PLAN.md` |
-| SQL product analytics | `sql/delhivery_analytics_queries.sql` |
+| Experiment design | `docs/CAUSAL_EXPERIMENT_DESIGN.md` |
+| Production retraining and monitoring | `docs/ML_PRODUCTION_DESIGN.md` |
+| Statistical validation | `docs/STATISTICAL_ANALYSIS_PLAN.md` |
+| SQL analytics | `sql/delhivery_analytics_queries.sql` |
 
 These files are design and analysis extensions. They do not require rerunning
 the notebooks or retraining the model.

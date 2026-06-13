@@ -74,9 +74,8 @@ hub_intervention_scores
 model_monitoring_daily
 ```
 
-## Interview Talking Point
+## Implementation Note
 
-For Microsoft-style ML system design, the model is only one component. A
-production system also needs data validation, feature refresh, graph rebuilds,
-monitoring, retraining policy, model rollback, and operations-facing alerting.
-
+The model is only one component of the production system. A complete rollout
+also needs data validation, feature refresh, graph rebuilds, monitoring,
+retraining policy, model rollback, and operations-facing alerting.

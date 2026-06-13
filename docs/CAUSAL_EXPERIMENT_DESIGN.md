@@ -65,10 +65,8 @@ network-wide disruptions, or weather effects.
 - Intervention cost should not exceed recovered value.
 - Customer promise time should not be relaxed to make metrics look better.
 
-## Interview Talking Point
+## Implementation Note
 
-For Amazon-style causal inference questions, the key idea is that ranking risky
-hubs is predictive analytics, but proving that an intervention caused
+Risk ranking is predictive analytics. Proving that an intervention caused
 improvement requires treatment/control comparison, pre/post measurement, and
 guardrails against spillover and seasonality.
-
