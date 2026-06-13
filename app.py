@@ -5,8 +5,11 @@ import streamlit as st
 
 from src.artifacts import load_artifacts
 from src.impact import (
+    BUSINESS_IMPACT,
     apply_corridor_filters,
     apply_hub_filters,
+    format_inr,
+    get_corridor_risk_table,
     get_full_corridor_risk_table,
     get_hub_scenario_table,
 )
@@ -31,7 +34,7 @@ st.set_page_config(
 
 
 def apply_custom_styles():
-    """Add lightweight styling while keeping the app beginner-friendly."""
+    """Apply dashboard styling."""
     st.markdown(
         """
         <style>
@@ -53,9 +56,7 @@ def apply_custom_styles():
         }
 
         .stApp {
-            background:
-                radial-gradient(circle at 14% 8%, rgba(217, 35, 46, 0.08), transparent 28%),
-                linear-gradient(180deg, #f7f8fb 0%, #eef2f7 100%);
+            background: #f7f8fb;
         }
 
         h1, h2, h3 {
@@ -92,15 +93,13 @@ def apply_custom_styles():
         }
 
         .hero {
-            background:
-                linear-gradient(135deg, rgba(17, 24, 39, 0.98) 0%, rgba(38, 49, 65, 0.96) 54%, rgba(217, 35, 46, 0.96) 100%),
-                repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 12px);
+            background: #111827;
             color: white;
             padding: 1.7rem 1.8rem;
             border-radius: 8px;
             margin-bottom: 1.25rem;
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            box-shadow: 0 18px 44px rgba(15, 23, 42, 0.18);
+            border-left: 6px solid var(--accent);
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
         }
 
         .hero h1 {
@@ -215,56 +214,6 @@ KPI_METRICS = [
     ("RF MAE", "30.95 min"),
     ("Graph RF MAE", "29.85 min"),
 ]
-
-BUSINESS_IMPACT = {
-    "revenue_at_risk": 2116800,
-    "potential_recovery": 395985,
-    "monthly_recovery_estimate": 395985,
-    "annualized_recovery_estimate": 4751820,
-    "best_hub": "IND421302AAG",
-    "best_recovery": 454385,
-    "best_breaches_avoided": 3029,
-}
-
-FALLBACK_HUB_IMPACT = pd.DataFrame(
-    [
-        ["IND421302AAG", 30, 1281, 29, 10.15, 3029, 454385, 913.07],
-        ["IND000000ACB", 30, 1848, 49, 10.37, 2897, 434575, 873.40],
-        ["IND562132AAA", 30, 1366, 36, 9.04, 1771, 265670, 534.48],
-        ["IND400072AAJ", 30, 53, 1, 32.40, 1240, 186030, 379.47],
-        ["IND501359AAE", 30, 660, 27, 9.37, 981, 147097, 296.80],
-    ],
-    columns=[
-        "hub",
-        "intervention_pct",
-        "trip_volume",
-        "affected_corridors",
-        "eta_improvement_min",
-        "sla_breaches_avoided",
-        "revenue_recovered_inr",
-        "roi_score",
-    ],
-)
-
-FALLBACK_CORRIDOR_RISK = pd.DataFrame(
-    [
-        ["IND743270AAA", "IND712311AAA", "FTL", 15.35, 1.00, 5, 51.11, "Critical"],
-        ["IND741201AAC", "IND712311AAA", "FTL", 15.27, 1.00, 4, 50.91, "Critical"],
-        ["IND844505AAB", "IND842001AAA", "FTL", 11.36, 0.94, 14, 40.22, "Critical"],
-        ["IND751002AAB", "IND754103AAA", "FTL", 10.25, 1.00, 7, 39.58, "Critical"],
-        ["IND722151AAA", "IND723130AAA", "FTL", 14.21, 0.70, 8, 38.55, "Critical"],
-    ],
-    columns=[
-        "source_center",
-        "destination_center",
-        "route_type",
-        "median_delay_ratio",
-        "sla_severe_rate",
-        "trip_count",
-        "risk_score",
-        "risk_category",
-    ],
-)
 
 ARTIFACT_FILES = {
     "Phase 1 checkpoint": "phase1_checkpoint.pkl",
@@ -383,33 +332,8 @@ def show_decision_panel(title: str, bullets: list[str], style: str = "callout"):
     )
 
 
-def format_inr(value: float) -> str:
-    """Format Indian Rupee values in a compact readable form."""
-    if value >= 100000:
-        return f"INR {value / 100000:.2f} lakh"
-    return f"INR {value:,.0f}"
-
-
-def get_hub_impact_table(artifacts: dict) -> pd.DataFrame:
-    """Use simulation artifacts when available, otherwise use static fallback."""
-    hub_results = artifacts.get("Hub simulation results")
-    if isinstance(hub_results, dict) and isinstance(hub_results.get("best_interventions"), pd.DataFrame):
-        table = hub_results["best_interventions"].copy()
-        table["intervention_pct"] = (table["intervention_pct"] * 100).round(0).astype(int)
-        return table
-    return FALLBACK_HUB_IMPACT.copy()
-
-
-def get_corridor_risk_table(artifacts: dict, top_n: int = 20) -> pd.DataFrame:
-    """Use ranked corridor artifacts when available, otherwise use static fallback."""
-    risk_results = artifacts.get("Corridor risk results")
-    if isinstance(risk_results, dict) and isinstance(risk_results.get("top20"), pd.DataFrame):
-        return risk_results["top20"].head(top_n).copy()
-    return FALLBACK_CORRIDOR_RISK.head(top_n).copy()
-
-
 def show_impact_cards(revenue_at_risk: float, recovery: float, breach_avoided: float):
-    """Render business impact cards in a frontend-style strip."""
+    """Render business impact summary cards."""
     st.markdown(
         f"""
         <div class="impact-strip">
