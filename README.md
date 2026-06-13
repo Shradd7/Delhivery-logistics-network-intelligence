@@ -1,5 +1,29 @@
 # Delhivery Logistics Network Intelligence
 
+## Live Dashboard
+
+This repository is ready for deployment on Streamlit Community Cloud.
+
+Deploy steps:
+
+1. Go to `https://share.streamlit.io`.
+2. Sign in with GitHub.
+3. Select repository `Shradd7/Delhivery-logistics-network-intelligence`.
+4. Set branch to `main`.
+5. Set main file path to `app.py`.
+6. Click Deploy.
+
+After deployment, add the generated Streamlit URL here:
+
+```text
+Live app: <add Streamlit Cloud URL>
+```
+
+The deployed app does not need the raw CSV or large pickle files. It runs from
+static plots and fallback summary tables included in the repository.
+
+---
+
 ## Overview
 
 This project analyzes Delhivery logistics data to identify shipment delay
@@ -248,6 +272,49 @@ For deployment, the dashboard uses:
 
 If local pickle artifacts are available, the dashboard loads them. If they are
 missing, the dashboard still runs with the fallback tables and static visuals.
+
+---
+
+## Production Roadmap
+
+This project can be converted from a portfolio dashboard into an operational
+analytics system with the following roadmap.
+
+### 1. Daily Network Scoring
+
+- Score every active hub and corridor daily using the latest shipment data.
+- Recompute delay ratio, SLA breach rate, trip volume, and bottleneck score.
+- Store daily scores in a warehouse table for trend monitoring.
+
+### 2. SLA Alerting
+
+- Trigger alerts for corridors crossing risk-score or severe-breach thresholds.
+- Send hub-level summaries to operations teams before peak dispatch windows.
+- Separate alerts by route type so FTL and Carting teams get relevant actions.
+
+### 3. Model Monitoring
+
+- Track ETA MAE, bias, and within-15-minute accuracy by route type and state pair.
+- Monitor drift in OSRM time, distance, trip volume, and delay ratio.
+- Flag hubs where prediction error rises faster than network average.
+
+### 4. Retraining Cadence
+
+- Retrain the ETA model on a fixed schedule, such as weekly or monthly.
+- Rebuild graph features from a training-window-only network snapshot.
+- Compare new model performance against the current production model before release.
+
+### 5. Intervention Measurement
+
+- Run hub intervention pilots with clear pre/post measurement windows.
+- Track SLA breaches avoided, ETA improvement, revenue recovered, and intervention cost.
+- Promote interventions only when recovered value exceeds operational cost.
+
+### 6. Product Analytics Layer
+
+- Add filters for business region, customer segment, route type, and hub owner.
+- Create a weekly operations review view for top risky corridors and hub actions.
+- Add exportable action lists for operations managers.
 
 ---
 
