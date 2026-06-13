@@ -211,6 +211,8 @@ KPI_METRICS = [
 BUSINESS_IMPACT = {
     "revenue_at_risk": 2116800,
     "potential_recovery": 395985,
+    "monthly_recovery_estimate": 395985,
+    "annualized_recovery_estimate": 4751820,
     "best_hub": "IND421302AAG",
     "best_recovery": 454385,
     "best_breaches_avoided": 3029,
@@ -438,6 +440,30 @@ def show_impact_cards(revenue_at_risk: float, recovery: float, breach_avoided: f
     )
 
 
+def show_scale_note(recovery: float):
+    """Explain how sample-window impact can scale in production."""
+    annualized = recovery * 12
+    st.markdown(
+        f"""
+        <div class="section-card">
+            <strong>Scale interpretation</strong>
+            <p>
+                These values are calculated from the available project dataset, so they are best read as a
+                sample-window impact estimate. In a production Delhivery setting, the same framework can be
+                applied across more facilities, more corridors, longer time windows, and live shipment volume.
+            </p>
+            <p>
+                For example, if the observed recoverable value of <strong>{format_inr(recovery)}</strong>
+                represents a monthly operating window, the annualized opportunity is approximately
+                <strong>{format_inr(annualized)}</strong>. The actual number should be recalculated using
+                Delhivery's current shipment volume, SLA penalty model, and revenue per delayed shipment.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def executive_summary(artifacts: dict):
     page_header(
         "Executive Summary",
@@ -451,7 +477,7 @@ def executive_summary(artifacts: dict):
         [
             "Graph-enhanced ETA modeling reduced MAE from 161.5 minutes to 29.85 minutes.",
             "The analyzed network spans 1,657 facilities and 2,781 corridors.",
-            "The project moves beyond prediction into hub, corridor, and intervention prioritization.",
+            "The project moves beyond prediction into hub, corridor, intervention, and impact prioritization.",
         ],
     )
 
@@ -487,11 +513,13 @@ def business_impact(artifacts: dict):
     hub_table = get_hub_impact_table(artifacts)
     breaches_avoided = hub_table["sla_breaches_avoided"].sum()
     show_impact_cards(revenue_at_risk, recovery, breaches_avoided)
+    show_scale_note(recovery)
 
     show_decision_panel(
         "Why this matters",
         [
             "The model identifies where delays happen, but the impact layer shows where action has financial value.",
+            "The current estimates come from the project dataset and can be amplified across a larger live network.",
             "Top hub interventions can reduce delay ratios, avoid SLA breaches, and recover revenue without changing every corridor.",
             "Corridor risk ranking creates a practical operations backlog for weekly review and escalation.",
         ],

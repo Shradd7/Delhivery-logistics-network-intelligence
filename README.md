@@ -42,10 +42,19 @@ The final output is a logistics intelligence system that helps answer:
 The project does not stop at ETA prediction. It converts model and network
 signals into an intervention plan for hubs and corridors.
 
+The rupee values below are calculated from the available project dataset, so
+they should be interpreted as sample-window impact estimates. In a production
+Delhivery environment, this framework can be amplified across more facilities,
+more corridors, longer time windows, and live shipment volume. If the observed
+recoverable value of INR 3.96 lakh represents a monthly operating window, the
+annualized opportunity is approximately INR 47.52 lakh before recalibration for
+current volume, SLA penalties, and revenue per delayed shipment.
+
 | Business question | Result |
 |---|---:|
 | Estimated revenue at risk from severe delays | INR 21.17 lakh |
 | Potential recovery from targeted interventions | INR 3.96 lakh |
+| Illustrative annualized recovery opportunity | INR 47.52 lakh |
 | Best single hub by recovered value | IND421302AAG |
 | Estimated recovery from best hub intervention | INR 4.54 lakh |
 | SLA breaches avoided at best hub | 3,029 |
@@ -56,6 +65,7 @@ Recommended actions from the intervention analysis:
 - Prioritize hubs that combine high trip volume, high bottleneck score, and high recoverable value.
 - Review critical FTL corridors where severe SLA breach rates approach 100%.
 - Track recovered SLA breaches and recovered revenue weekly after intervention.
+- Recalculate impact at full Delhivery scale using current shipment volume and SLA penalty assumptions.
 
 Top hub intervention examples:
 
