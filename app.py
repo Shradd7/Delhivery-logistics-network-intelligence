@@ -11,9 +11,19 @@ from src.impact import (
     format_inr,
     get_corridor_risk_table,
     get_full_corridor_risk_table,
+    get_hub_assumptions,
     get_hub_scenario_table,
+    get_impact_reconciliation,
 )
-from src.model_validation import ERROR_BY_SEGMENT, VALIDATION_NOTES, get_feature_importance, get_model_results
+from src.model_validation import (
+    ERROR_BY_SEGMENT,
+    VALIDATION_NOTES,
+    get_feature_importance,
+    get_graph_validation_tests,
+    get_leakage_safe_graph_validation,
+    get_model_results,
+    get_segment_error_analysis,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -452,6 +462,24 @@ def business_impact(artifacts: dict):
     col_c.metric("Avg ETA gain", f"{hub_table['eta_improvement_min'].mean():.2f} min")
     show_scale_note(scenario_recovery)
 
+    st.subheader("Impact Claim Boundaries")
+    st.markdown(
+        """
+        The recovery values are scenario estimates, not realized Delhivery P&L.
+        The canonical headline uses the conservative phase 5 sample-window
+        recovery estimate. Hub-level values below are intervention scenarios
+        based on explicit SLA penalty, annualization, and delay-reduction
+        assumptions.
+        """
+    )
+    assumptions = get_hub_assumptions()
+    reconciliation = get_impact_reconciliation()
+    tab_assumptions, tab_claims = st.tabs(["Simulator assumptions", "Claim reconciliation"])
+    with tab_assumptions:
+        st.dataframe(assumptions, use_container_width=True, hide_index=True)
+    with tab_claims:
+        st.dataframe(reconciliation, use_container_width=True, hide_index=True)
+
     show_decision_panel(
         "Why this matters",
         [
@@ -530,7 +558,7 @@ def eta_model_performance(artifacts: dict):
     col1, col2, col3 = st.columns(3)
     col1.metric("OSRM Baseline MAE", "161.5 min")
     col2.metric("Random Forest MAE", "30.95 min")
-    col3.metric("Graph RF MAE", "29.85 min", delta="-1.09 min vs RF")
+    col3.metric("Graph RF MAE", "29.81 min", delta="-1.13 min vs RF")
 
     show_decision_panel(
         "Model story",
@@ -562,13 +590,34 @@ def eta_model_performance(artifacts: dict):
     validation_results = get_model_results(artifacts)
     st.dataframe(validation_results, use_container_width=True, hide_index=True)
 
+    st.subheader("Validation Evidence")
+    graph_tests = get_graph_validation_tests()
+    leakage_safe = get_leakage_safe_graph_validation()
+    segment_errors = get_segment_error_analysis()
+    tab_tests, tab_leakage, tab_errors = st.tabs(
+        ["Wilcoxon test", "Leakage-safe graph check", "Segment-wise errors"]
+    )
+    with tab_tests:
+        st.dataframe(graph_tests, use_container_width=True, hide_index=True)
+    with tab_leakage:
+        st.dataframe(leakage_safe, use_container_width=True, hide_index=True)
+        st.caption(
+            "Leakage-safe graph validation rebuilds graph features from training trips only, then maps them to validation trips."
+        )
+    with tab_errors:
+        st.dataframe(
+            segment_errors.sort_values("mae_min", ascending=False).head(20),
+            use_container_width=True,
+            hide_index=True,
+        )
+
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Top Feature Importance")
         feature_importance = get_feature_importance(artifacts)
         st.bar_chart(feature_importance.set_index("feature"), use_container_width=True)
     with col2:
-        st.subheader("Error Review by Segment")
+        st.subheader("Operational Error Notes")
         st.dataframe(ERROR_BY_SEGMENT, use_container_width=True, hide_index=True)
 
     show_decision_panel("Validation controls", VALIDATION_NOTES)

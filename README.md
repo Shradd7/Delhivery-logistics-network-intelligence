@@ -56,8 +56,10 @@ The project turns shipment segment data into a decision system:
 | Chronic corridors | 92 |
 | OSRM Baseline MAE | 161.5 min |
 | Random Forest MAE | 30.95 min |
-| Graph-Enhanced RF MAE | 29.85 min |
-| Cross-Validation MAE | 28.81 +/- 0.48 min |
+| Graph-Enhanced RF MAE | 29.81 min |
+| Cross-Validation MAE | 28.78 +/- 0.51 min |
+| Wilcoxon validation | p = 0.0065 |
+| Leakage-safe graph lift | 0.91 min MAE improvement |
 
 ---
 
@@ -67,17 +69,18 @@ The project does not stop at ETA prediction. It converts model and network
 signals into an intervention plan for hubs and corridors.
 
 The rupee values below are calculated from the available project dataset and
-should be interpreted as sample-window estimates. In a production environment,
-the same framework can be scaled across more facilities, more corridors,
-longer time windows, and live shipment volume.
+should be interpreted as sample-window estimates. They are not realized
+Delhivery P&L. In a production environment, the same framework can be scaled
+across more facilities, more corridors, longer time windows, and live shipment
+volume.
 
 | Business Question | Result |
 |---|---:|
 | Estimated revenue at risk from severe delays | INR 21.17 lakh |
-| Potential recovery from targeted interventions | INR 3.96 lakh |
+| Canonical potential recovery from targeted interventions | INR 3.96 lakh |
 | Illustrative annualized recovery opportunity | INR 47.52 lakh |
 | Best single hub by recovered value | IND421302AAG |
-| Estimated recovery from best hub intervention | INR 4.54 lakh |
+| Scenario recovery from best 30% hub intervention | INR 4.54 lakh |
 | SLA breaches avoided at best hub | 3,029 |
 
 ### Recommended Actions
@@ -94,6 +97,7 @@ longer time windows, and live shipment volume.
 - Annualized recovery assumes the observed recoverable value represents one comparable operating month.
 - Production ROI should include intervention cost, shipment volume, SLA penalty rules, and revenue per delayed shipment.
 - Hub recommendations should be treated as pilot priorities before permanent capacity investments.
+- `reports/evidence/impact_claim_reconciliation.csv` separates canonical headline claims from scenario and supporting estimates.
 
 ### Top Hub Intervention Examples
 
@@ -148,6 +152,14 @@ Interactive dashboard controls include:
 |   +-- CAUSAL_EXPERIMENT_DESIGN.md
 |   +-- ML_PRODUCTION_DESIGN.md
 |   +-- STATISTICAL_ANALYSIS_PLAN.md
++-- reports/
+|   +-- evidence/
+|       +-- canonical_model_validation.csv
+|       +-- graph_validation_tests.csv
+|       +-- leakage_safe_graph_validation.csv
+|       +-- segment_error_analysis.csv
++-- scripts/
+|   +-- build_evidence_pack.py
 +-- sql/
 |   +-- delhivery_analytics_queries.sql
 +-- assets/
@@ -166,7 +178,8 @@ Interactive dashboard controls include:
 ```
 
 Large raw data and pickle checkpoints are intentionally excluded from GitHub.
-The deployed dashboard runs from static plots and fallback summary tables.
+The deployed dashboard runs from static plots, lightweight evidence CSVs, and
+fallback summary tables.
 
 ---
 
@@ -180,10 +193,13 @@ production monitoring, statistical validation, and SQL-based analytics.
 | Experiment design | `docs/CAUSAL_EXPERIMENT_DESIGN.md` |
 | Production retraining and monitoring | `docs/ML_PRODUCTION_DESIGN.md` |
 | Statistical validation | `docs/STATISTICAL_ANALYSIS_PLAN.md` |
+| Evidence pack | `reports/evidence/` |
+| Evidence generator | `scripts/build_evidence_pack.py` |
 | SQL analytics | `sql/delhivery_analytics_queries.sql` |
 
-These files are design and analysis extensions. They do not require rerunning
-the notebooks or retraining the model.
+The evidence pack is generated from local artifacts and keeps canonical model,
+statistical, segment-error, leakage-safe graph, and simulator-assumption
+outputs small enough for GitHub review.
 
 ---
 
@@ -226,8 +242,10 @@ Graph features used:
 
 Result:
 
-- Graph RF MAE: 29.85 min
-- Graph features improved MAE by 1.09 minutes.
+- Graph RF MAE: 29.81 min
+- Graph features improved MAE by 1.13 minutes versus the RF baseline.
+- Paired Wilcoxon signed-rank validation on the same holdout trips: p = 0.0065.
+- Leakage-safe graph reconstruction still showed a 0.91 min MAE lift after rebuilding graph features from training trips only.
 
 ### Phase 5 - Business Impact Simulation
 
@@ -249,9 +267,21 @@ score.
 
 - Modeling is evaluated at trip level after segment cleaning and aggregation.
 - Train/test splitting should happen after aggregation to avoid leakage from multiple segments of the same trip.
-- Cross-validation MAE is reported as 28.81 +/- 0.48 minutes.
+- Cross-validation MAE is reported as 28.78 +/- 0.51 minutes.
 - Feature importance confirms that distance, OSRM time, segment count, and bottleneck features drive predictions.
+- Segment-wise error analysis is exported by route type, corridor risk bucket, delay bucket, source hub, time band, and trip complexity.
 - Error should be monitored by route type, risk category, state pair, and delay bucket in production.
+
+### Evidence Pack
+
+The GitHub repository includes lightweight validation exports in
+`reports/evidence/`:
+
+- `canonical_model_validation.csv` keeps model metrics consistent across the README and dashboard.
+- `graph_validation_tests.csv` stores the Wilcoxon test for paired absolute errors.
+- `leakage_safe_graph_validation.csv` checks graph lift when graph features are rebuilt from training trips only.
+- `segment_error_analysis.csv` identifies where the ETA model fails by route, risk bucket, delay bucket, hub, time band, and trip complexity.
+- `hub_simulator_assumptions.csv` and `impact_claim_reconciliation.csv` make the business impact claims auditable.
 
 ---
 
@@ -264,10 +294,12 @@ For deployment, the dashboard uses:
 
 - Static PNG plots from `assets/plots/`.
 - Lightweight graph output from `artifacts/delhivery_graph.edgelist`.
+- Lightweight validation exports from `reports/evidence/`.
 - Fallback summary tables embedded in `src/impact.py` and `src/model_validation.py`.
 
 If local pickle artifacts are available, the dashboard loads them. If they are
-missing, the dashboard still runs with fallback tables and static visuals.
+missing, the dashboard still runs with evidence CSVs, fallback tables, and
+static visuals.
 
 ---
 
@@ -298,7 +330,16 @@ Open:
 http://localhost:8501
 ```
 
-### 4. Run with Docker
+### 4. Optional: regenerate the evidence pack
+
+If the local pickle checkpoints exist, rebuild the lightweight validation CSVs:
+
+```powershell
+pip install -r requirements-analysis.txt
+.\delhivery_env\Scripts\python.exe -B scripts\build_evidence_pack.py
+```
+
+### 5. Run with Docker
 
 ```bash
 docker build -t delhivery-dashboard .
