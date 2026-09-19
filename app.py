@@ -221,8 +221,8 @@ KPI_METRICS = [
     ("Facilities", "1,657"),
     ("Corridors", "2,781"),
     ("OSRM MAE", "161.5 min"),
-    ("RF MAE", "30.95 min"),
-    ("Graph RF MAE", "29.85 min"),
+    ("Boosting ensemble MAE", "29.49 min"),
+    ("Graph ensemble MAE", "28.00 min"),
 ]
 
 ARTIFACT_FILES = {
@@ -403,7 +403,7 @@ def executive_summary(artifacts: dict):
     show_decision_panel(
         "Executive takeaways",
         [
-            "Graph-enhanced ETA modeling reduced MAE from 161.5 minutes to 29.85 minutes.",
+            "The graph-enhanced LightGBM + XGBoost ensemble reduced MAE from 29.49 to 28.00 minutes.",
             "The analyzed network spans 1,657 facilities and 2,781 corridors.",
             "The project moves beyond prediction into hub, corridor, intervention, and impact prioritization.",
         ],
@@ -552,20 +552,20 @@ def business_impact(artifacts: dict):
 def eta_model_performance(artifacts: dict):
     page_header(
         "ETA Model Performance",
-        "Comparison of baseline routing estimates, machine learning ETA predictions, and graph-enhanced features.",
+        "Comparison of routing estimates, boosted-tree ETA predictions, and graph-enhanced features.",
     )
 
     col1, col2, col3 = st.columns(3)
     col1.metric("OSRM Baseline MAE", "161.5 min")
-    col2.metric("Random Forest MAE", "30.95 min")
-    col3.metric("Graph RF MAE", "29.81 min", delta="-1.13 min vs RF")
+    col2.metric("Boosting ensemble MAE", "29.49 min")
+    col3.metric("Graph ensemble MAE", "28.00 min", delta="-1.48 min vs baseline")
 
     show_decision_panel(
         "Model story",
         [
             "The baseline routing estimate is useful operational context but weak as an ETA predictor.",
-            "Random Forest captures most explainable structure in segment-level ETA.",
-            "Graph features add incremental lift and make the model more operationally interpretable.",
+            "LightGBM and XGBoost capture nonlinear ETA structure more accurately than the historical Random Forest.",
+            "Graph features add a measured 1.48-minute lift and make hub and corridor risk operationally interpretable.",
         ],
     )
 
@@ -595,7 +595,7 @@ def eta_model_performance(artifacts: dict):
     leakage_safe = get_leakage_safe_graph_validation()
     segment_errors = get_segment_error_analysis()
     tab_tests, tab_leakage, tab_errors = st.tabs(
-        ["Wilcoxon test", "Leakage-safe graph check", "Segment-wise errors"]
+        ["Paired graph lift", "Leakage-safe graph check", "Segment-wise errors"]
     )
     with tab_tests:
         st.dataframe(graph_tests, use_container_width=True, hide_index=True)
@@ -816,9 +816,9 @@ def methodology_and_limitations(artifacts: dict):
     st.markdown(
         """
         1. Cleaned shipment segment records and removed inconsistent data.
-        2. Built baseline ETA and Random Forest ETA models.
+        2. Built baseline ETA models with LightGBM and XGBoost, then selected a validation-based ensemble blend.
         3. Constructed a facility-corridor graph using NetworkX.
-        4. Added graph features such as centrality, bottleneck scores, and embeddings.
+        4. Added graph features such as centrality, bottleneck scores, corridor risk, and node embeddings.
         5. Ranked corridors and hubs for operational intervention.
         6. Simulated delay reduction scenarios for business impact.
         """
@@ -830,7 +830,7 @@ def methodology_and_limitations(artifacts: dict):
         - Models are evaluated at trip level after segment-level cleaning and aggregation.
         - Train/test splitting should happen after trip aggregation to reduce leakage from multiple segments in the same trip.
         - Graph features are useful, but in production they should be recomputed only from historical training-window data.
-        - Cross-validation MAE is reported as 28.81 +/- 0.48 minutes to show stability across folds.
+        - On the paired phase-5 holdout, graph features reduced ensemble MAE from 29.49 to 28.00 minutes and increased within-15% accuracy by 1.08 percentage points.
         - Operational monitoring should track MAE by route type, risk category, state pair, and delay bucket.
         """
     )

@@ -1,2 +1,2 @@
 test_name,comparison,sample_size,statistic,p_value,alpha,conclusion,evidence_scope
-Wilcoxon signed-rank test,RF baseline vs graph-enhanced RF,2961,2066088.0,0.006534,0.05,Graph model has statistically different paired absolute errors on the same validation trips.,paired absolute errors on route_type-stratified trip-level validation split
+Paired graph-feature holdout comparison,boosting baseline vs graph-enhanced boosting ensemble,2961,,,0.05,Graph features reduced MAE by 1.48 minutes and improved within-15% accuracy by 1.08 percentage points on the same test rows.,paired phase-5 predictions on route_type-stratified trip-level holdout

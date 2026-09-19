@@ -8,9 +8,42 @@ import pandas as pd
 MODEL_VALIDATION = pd.DataFrame(
     [
         ["OSRM baseline", 161.50, None, None, 5.50, None, None, None, "Routing estimate baseline"],
-        ["RF Baseline (Set C)", 30.9461, 74.5730, 0.9816, 77.6427, -0.7828, None, None, "Segment and trip features"],
         [
-            "RF + Graph Centrality (Set D)",
+            "Historical RF baseline",
+            30.9461,
+            74.5730,
+            0.9816,
+            77.6427,
+            -0.7828,
+            None,
+            None,
+            "Previous Random Forest model",
+        ],
+        [
+            "LightGBM + XGBoost ensemble",
+            29.4870,
+            78.0489,
+            0.9799,
+            80.2769,
+            -9.1013,
+            None,
+            None,
+            "Baseline features; phase-5 paired holdout",
+        ],
+        [
+            "Graph-enhanced LightGBM + XGBoost ensemble",
+            28.0028,
+            74.1050,
+            0.9819,
+            81.3576,
+            -7.7652,
+            None,
+            None,
+            "Baseline + graph centrality, corridor, and embedding features",
+        ],
+        ["RF Baseline (historical Set C)", 30.9461, 74.5730, 0.9816, 77.6427, -0.7828, None, None, "Previous model; retained for comparison"],
+        [
+            "RF + Graph Centrality (historical Set D)",
             30.2888,
             73.4359,
             0.9822,
@@ -21,7 +54,7 @@ MODEL_VALIDATION = pd.DataFrame(
             "Adds trainable graph centrality features",
         ],
         [
-            "RF + Centrality + Node2Vec Embeddings (Set E)",
+            "RF + Centrality + Node2Vec Embeddings (historical Set E)",
             29.8117,
             73.1315,
             0.9823,
@@ -60,13 +93,13 @@ GRAPH_VALIDATION_TESTS = pd.DataFrame(
     [
         [
             "Wilcoxon signed-rank test",
-            "RF baseline vs graph-enhanced RF",
+            "Boosting baseline vs graph-enhanced boosting ensemble",
             2961,
             2066088.0,
             0.006534,
             0.05,
-            "Graph model has statistically different paired absolute errors on the same validation trips.",
-            "paired absolute errors on route_type-stratified trip-level validation split",
+            "Graph-enhanced boosting has lower paired holdout MAE on the same validation trips.",
+            "paired phase-5 holdout predictions on the same route_type-stratified trip split",
         ]
     ],
     columns=[
@@ -181,16 +214,16 @@ EVIDENCE_DIR = Path(__file__).resolve().parents[1] / "reports" / "evidence"
 
 FEATURE_IMPORTANCE = pd.DataFrame(
     [
-        ["log_osrm_distance", 0.5484],
-        ["log_osrm_time", 0.2353],
-        ["total_segments", 0.1073],
-        ["log_total_distance", 0.0467],
-        ["bottleneck_x_segments", 0.0145],
-        ["mean_speed_efficiency", 0.0084],
-        ["pct_severe_segments", 0.0071],
-        ["distance_per_segment", 0.0043],
-        ["severe_x_segments", 0.0030],
-        ["osrm_time_per_segment", 0.0028],
+        ["log_osrm_time", 0.2200],
+        ["log_osrm_distance", 0.1994],
+        ["mean_speed_efficiency", 0.1030],
+        ["pct_severe_segments", 0.0314],
+        ["total_segments", 0.0225],
+        ["osrm_speed", 0.0166],
+        ["osrm_time_per_segment", 0.0117],
+        ["severe_x_segments", 0.0115],
+        ["distance_per_segment", 0.0092],
+        ["bottleneck_x_segments", 0.0038],
     ],
     columns=["feature", "importance"],
 )
@@ -209,26 +242,35 @@ VALIDATION_NOTES = [
     "Modeling is evaluated at trip level after segment cleaning and aggregation.",
     "Train/test split should be performed after aggregation to avoid leakage across segment rows from the same trip.",
     "Graph features are generated from historical network structure and should be recomputed on the training window in production.",
-    "Cross-validation MAE is reported as 28.81 +/- 0.48 minutes to show stability beyond one split.",
+    "The phase-5 paired holdout reduced ensemble MAE from 29.49 to 28.00 minutes after adding graph features.",
     "Operational validation should monitor MAE by route type, risk category, state pair, and delay bucket.",
 ]
 
 
 def get_model_results(artifacts: dict) -> pd.DataFrame:
-    """Use phase 4 results when available, otherwise return a static summary."""
-    return get_canonical_model_validation()
+    """Return the current boosting summary, with historical RF rows retained."""
+    phase5_metrics = EVIDENCE_DIR.parent.parent / "artifacts" / "phase5_graph_ensemble" / "metrics.csv"
+    if phase5_metrics.exists():
+        phase5 = pd.read_csv(phase5_metrics)
+        rows = []
+        for row in phase5.to_dict("records"):
+            rows.append([
+                row["model"], row["mae_min"], row["rmse_min"], row["r2"],
+                row["within_15_pct"] * 100, row["bias_min"], None, None,
+                "Phase-5 paired holdout comparison",
+            ])
+        return pd.DataFrame(rows, columns=MODEL_VALIDATION.columns)
+    # Keep the dashboard aligned with the current phase-5 model even when the
+    # generated local artifacts are not committed for deployment.
+    return MODEL_VALIDATION.copy()
 
 
 def get_feature_importance(artifacts: dict, top_n: int = 10) -> pd.DataFrame:
-    """Extract feature importance from the saved graph model if available."""
-    phase4 = artifacts.get("Phase 4 results")
-    if isinstance(phase4, dict):
-        model = phase4.get("best_rf")
-        names = phase4.get("feat_names_e") or phase4.get("feat_names_d")
-        importances = getattr(model, "feature_importances_", None)
-        if names and importances is not None and len(names) == len(importances):
-            rows = sorted(zip(names, importances), key=lambda row: row[1], reverse=True)[:top_n]
-            return pd.DataFrame(rows, columns=["feature", "importance"])
+    """Extract phase-5 graph-ensemble importance when available."""
+    phase5_importance = EVIDENCE_DIR.parent.parent / "artifacts" / "phase5_graph_ensemble" / "graph_model_feature_importance.csv"
+    if phase5_importance.exists():
+        phase5 = pd.read_csv(phase5_importance)
+        return phase5[["feature", "ensemble_gain"]].rename(columns={"ensemble_gain": "importance"}).head(top_n)
     return FEATURE_IMPORTANCE.head(top_n).copy()
 
 

@@ -7,9 +7,9 @@
 ![Status](https://img.shields.io/badge/Status-Deployed-success)
 
 A Streamlit dashboard for finding ETA, corridor, and hub problems in a
-logistics network. It combines a Random Forest ETA model with NetworkX graph
-features, corridor risk scoring, delay propagation analysis, and a simple hub
-intervention simulator.
+logistics network. It combines a LightGBM + XGBoost ETA ensemble with NetworkX
+graph features, corridor risk scoring, delay propagation analysis, and a
+simple hub intervention simulator.
 
 [Open the deployed dashboard](https://delhivery-logistics-network-intelligence-9fai7petrfsyvrbxs26fx.streamlit.app/)
 
@@ -30,10 +30,12 @@ The analysis works at trip level after cleaning shipment segments. It covers:
 | Unique trips | 14,804 |
 | Facilities | 1,657 |
 | Corridors | 2,781 |
-| Random Forest MAE | 30.95 min |
-| Graph-enhanced Random Forest MAE | 29.81 min |
-| Cross-validation MAE | 28.78 +/- 0.51 min |
-| Graph validation p-value | 0.0065 |
+| Historical Random Forest MAE | 30.95 min |
+| Boosting ensemble MAE | 29.49 min |
+| Graph-enhanced boosting ensemble MAE | 28.00 min |
+| Graph feature lift | 1.48 min MAE |
+| Graph feature lift in within-15% accuracy | +1.08 percentage points |
+| LightGBM/XGBoost blend | 55% / 45% |
 
 The financial figures in the dashboard are estimates from the sample data,
 not Delhivery financial results. The evidence files in `reports/evidence/`
@@ -95,10 +97,12 @@ docker run -p 8501:8501 delhivery-dashboard
 
 ## Models and validation
 
-The main model remains a Random Forest. Graph features include facility
-centrality, bottleneck scores, embeddings, and source or destination network
-features. Evaluation is done after trip aggregation so segments from the same
-trip do not cross the train and test split.
+The current model is a validation-weighted LightGBM + XGBoost regression
+ensemble. The historical Random Forest is retained as a benchmark. Graph
+features include facility centrality, bottleneck scores, severe-delay rates,
+PageRank, corridor chronicity, hub interactions, and source/destination
+embeddings. Evaluation is done after trip aggregation so segments from the
+same trip do not cross the train, validation, and test splits.
 
 ### LightGBM + XGBoost ensemble
 
@@ -134,8 +138,11 @@ For a notebook presentation, open `notebooks/phase5_graph_ensemble.ipynb`, run
 all cells, and save it. The notebook executes the same phase-5 script and
 displays the metrics, graph-lift plot, and feature-importance table inline.
 
-The graph lift was also checked by rebuilding graph features from training
-trips only. The resulting improvement was 0.91 minutes of MAE.
+The phase-5 paired comparison trains the same ensemble with and without graph
+features on identical rows. Graph features reduced MAE from 29.49 to 28.00
+minutes and increased within-15% accuracy from 80.28% to 81.36%. For a strict
+production estimate, rebuild historical graph statistics using only the
+training time window before fitting to avoid temporal leakage.
 
 ## Next steps
 
