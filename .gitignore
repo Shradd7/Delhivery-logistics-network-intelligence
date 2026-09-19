@@ -28,3 +28,5 @@ data/*.csv
 data/*.xlsx
 data/*.parquet
 artifacts/*.pkl
+artifacts/boosting_ensemble/
+artifacts/phase5_graph_ensemble/

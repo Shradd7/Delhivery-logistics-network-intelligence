@@ -100,6 +100,40 @@ centrality, bottleneck scores, embeddings, and source or destination network
 features. Evaluation is done after trip aggregation so segments from the same
 trip do not cross the train and test split.
 
+### LightGBM + XGBoost ensemble
+
+To train the boosted-tree ensemble using the saved phase checkpoints:
+
+```powershell
+python -m pip install -r requirements-analysis.txt
+python scripts/train_boosting_ensemble.py
+```
+
+The runner selects the LightGBM/XGBoost blend weight on an internal validation
+split, evaluates once on an untouched test split, and writes the results to
+`artifacts/boosting_ensemble/`: `metrics.csv`, `feature_importance.csv`,
+`permutation_importance.csv`, `feature_importance.png`,
+`model_diagnostics.png`, and a reloadable `joblib` model bundle.
+
+The graph features are loaded from the existing phase-4 checkpoint. For a
+strict production estimate, rebuild those historical graph features using only
+the training time window before fitting, because graph statistics calculated
+from the full dataset can otherwise introduce temporal leakage.
+
+To explicitly measure graph lift for the boosted ensemble, run:
+
+```powershell
+python scripts/phase5_graph_ensemble.py
+```
+
+This compares the same LightGBM + XGBoost ensemble with and without graph
+features on identical validation and test rows. Results and the graph-lift
+plot are written to `artifacts/phase5_graph_ensemble/`.
+
+For a notebook presentation, open `notebooks/phase5_graph_ensemble.ipynb`, run
+all cells, and save it. The notebook executes the same phase-5 script and
+displays the metrics, graph-lift plot, and feature-importance table inline.
+
 The graph lift was also checked by rebuilding graph features from training
 trips only. The resulting improvement was 0.91 minutes of MAE.
 
